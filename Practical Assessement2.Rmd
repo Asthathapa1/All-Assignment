@@ -1,0 +1,175 @@
+---
+title: "Pratical assignment"
+author: "Astha4651728"
+date: "02/09/2021"
+output: html_document
+---
+
+## *Astha* **4651728**
+---------------------
+
+
+# Assignment 2
+---------------------
+
+![](astha.jpg)
+### PART 2
+
+```{r}
+library(tidyverse)
+library(knitr)
+```
+
+
+```{r}
+
+thanks_meal<-read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2018/2018-11-20/thanksgiving_meals.csv")
+
+```
+
+
+
+```{r}
+###1.Display the first 10 rows of the dataset using RMarkdown (1 marks)
+thanks_meal%>%head(10)%>% kable
+```
+
+```{r}
+###2. Use `fct_reorder` and `parse_number` functions to create a factor variable `family_income`
+family_income<- thanks_meal %>%
+       mutate(family_income = fct_reorder(family_income, parse_number(family_income)))
+
+```
+
+
+
+```{r}
+###3. Generate the general statistics of the dataset using `summary()` and `skim()` function (2 mark).
+library(skimr)
+skim(thanks_meal)
+summary(thanks_meal)
+```
+
+```{r}
+###4.What is the number of people who celebrate?
+###Ans. 980 is the number of people who celebrate
+thanks_meal%>%
+  count(celebrate, sort = TRUE) %>%filter(celebrate =="Yes")%>%
+  kable()
+```
+
+
+
+```{r}
+##5. What are categories and stats for each main dish served and the method it is prepared?
+thanks_meal%>%
+  count(main_dish, main_prep, sort = TRUE) %>%
+  kable()
+```
+
+
+```{r}
+###6. Create a data viz showing this in the most evident way. Provide your own legend and use themes.
+thanks_meal%>%
+  count(main_dish, main_prep, sort = TRUE) %>%
+  ggplot(aes(main_dish, n, fill=main_prep))+
+  geom_col()+ facet_wrap(main_prep~.)+
+  theme(legend.position = "none") +
+  coord_flip()+
+  labs(x="Types of Main Dish",y= "Item Numbers", title="Different Main Dish", caption="Data Visualisation graph") + theme_linedraw()
+```
+
+```{r}
+###How many use cranberry sauce? How many use gravy?
+  ###Total 803 used cranberry sauce and 892 used gravy 
+ thanks_meal%>%count(cranberry, sort = TRUE) %>%
+  arrange(desc(n))%>%kable()
+
+ thanks_meal%>%count(gravy, sort = TRUE)%>%filter(gravy =="Yes") %>%
+  arrange(desc(n))%>%kable()
+ 
+ 
+ thanks_meal%>%count(cranberry,gravy, sort = TRUE) %>%filter(gravy =="Yes")%>%
+  arrange(desc(n))%>%kable() ## showing the number of people using gravy along with cranberry sauce
+```
+
+```{r fig.width = 20}
+
+### 8.  What is the distribution of those who celebrate across income ranges
+thanks_meal%>%count(celebrate,family_income, sort = TRUE) %>%
+  arrange(desc(n))%>%kable()
+```
+
+
+```{r}
+###9. Present this information in the most evident way on the data viz.
+thanks_meal%>%
+count(celebrate,family_income, sort=TRUE)%>%filter(celebrate=="Yes")%>% ggplot(aes(family_income,n,fill=celebrate))+
+  facet_wrap(celebrate~.)+
+  theme(legend.position = "none") +
+  geom_col() +
+  coord_flip()+
+  geom_text(aes(label = round(n, digits = 2)),vjust =-0.2, color="pink") +
+  labs(x="income range ", y=" " , title="Distribution of people who celebrate per across income range" , caption = "Data visualization")
+```
+
+
+
+```{r}
+### 10.  What are the most common pies, sides, and desserts?
+
+common<-thanks_meal %>%
+  select(id, starts_with("side"),
+         starts_with("pie"),
+         starts_with("dessert")) %>%
+  select(-side15, -pie13, -dessert12) %>%
+  gather(type, value, -id) %>%
+  count(type, value, sort = TRUE)%>%
+  filter(!is.na(value),
+         !value %in% c("None", "Other (please specify)")) %>%
+  mutate(type = str_remove(type, "\\d+"))
+common%>% head(20)
+
+```
+
+
+```{r}
+###11. Present this information on a data viz)
+
+common%>% group_by(type)%>% mutate(mostcommons=fct_reorder(value,n))%>%ungroup()%>%
+ ggplot(aes(mostcommons,n,fill=type))+
+  facet_wrap(type~.)+
+  coord_flip()+
+  geom_col()+
+  geom_text(aes(label=n),vjust=0.2, size=2, colour="pink")+
+  labs(x="Name of food", y="Frequecy of those food", title="", caption = "Distribution of Common type of dessert,pie and side served in Thanks giving ")
+  
+```
+
+
+
+
+
+
+
+
+```{r fig.width = 16}
+###13How do the servings differ by income?
+###With the increase in income the serving for turkey dish have increased but overall there is not much change in main dish serving in comparison to income.
+
+
+
+## 14.Present this information on a data viz
+
+
+thanks_meal%>% filter(main_dish!="None", main_dish!="other(please specify)")%>% count(main_dish, family_income) %>% ggplot(aes(main_dish, n, fill=family_income))+geom_col()+
+  facet_wrap(family_income~.)+ coord_flip()+
+  geom_text(aes(label=round(n, digits=1)), vjust=-0.5, size=4, color="black")+ theme(legend.position = "none") +
+  labs(x="Dish Type", y="Frequency of dish prepared", title="Most common ways served meal according to income during thanks giving",caption ="Data visualisation through graph" )
+```
+---------------------
+### Resources:
+
+####RMarkdown tutorial https://rmarkdown.rstudio.com/lesson-1.html
+
+####ggplot2: Elegant Graphics for Data Analysis https://ggplot2-book.org/
