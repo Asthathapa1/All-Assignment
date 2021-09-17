@@ -1,0 +1,243 @@
+---
+title: "Assessment 3"
+author: "Astha4651728$Navneet4651717"
+date: "12/09/2021"
+output: html_document
+------------------------------------------------------------------------
+
+
+#*Data Analysis for dataset related to the Carbon dioxide gas emission from different types of food*#
+
+
+*Introduction*
+
+There is change in the climate caused by human factors. The differenty category of food are the cause of the unwanted carbondioxide gas emission which should be reduced by taking a proper step. The type of food we eat is related to the unwanted emission of Carbondioxide gas. 
+This reports is based on data Analysis for dataset related to the Carbon dioxide gas emission from different types of food.And the food production contributing to Co2 gas emission.
+
+
+
+
+
+```{r}
+##Running different packages
+
+library(tidyverse)
+library(knitr)
+
+library(ranger)
+
+```
+
+
+
+
+The data was taken from following dataset are for analysis.
+```{r}
+food_consumption <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-02-18/food_consumption.csv')
+
+```
+
+  
+    
+  
+Main Reseaerch Question:
+  
+Can we predict the final Carbon dioxide emission from different food according to the type and volume  food consumed?
+
+
+Sub-Question:
+  
+Q1. How many different types of food category are there?
+Q2. What is the relationship between the total food consumption volume and the final CO2 emission?
+Q3. Is the relationship between the total consumption and finalCO2 emission dependent on food category?
+
+
+
+```{r} 
+##We have changes the data varibles names to simple name
+names(food_consumption)<-tolower(names(food_consumption))
+names(food_consumption)<-str_replace(names(food_consumption)," ", "_")
+food_consumption<- food_consumption %>%setNames(c( "country","food_category", "total_consumption", "total_emmission"))
+
+food_consumption
+
+food_consumption<- food_consumption %>%
+  mutate_if(is.character, factor)
+```
+
+
+
+
+
+. 
+```{r}
+##Q1. How many different types of food category are there?
+##There are 11 different types of food category and 136 country participated.
+food_consumption%>%
+  count(food_category)%>%
+  kable()
+
+```
+
+
+
+
+
+```{r}
+##2. What is the relationship between the total food consumption volume and the final CO2 emission?
+
+library(ggplot2)
+food_consumption%>%
+  ggplot(aes(total_consumption,total_emmission))+
+           geom_point() +
+           geom_smooth(method = lm, se = FALSE)
+## Using ggplot to show the relationship between total food consumption and total emission.
+##We can see that food consumption slopes  have wider sutures at the end. The slope of the line shows a positive relation between the total consumption and total emission
+```
+
+
+
+
+
+
+
+
+```{r}
+##Q3. Is the relationship between the total consumption and finalCO2 emission dependent on food category?
+
+## For graph showing different category of food with changes in CO2 emission
+
+
+food_consumption%>%
+  ggplot(aes( total_consumption, total_emmission, colour=food_category)) +
+           geom_point() +
+           geom_smooth(method = lm, se = FALSE)+
+           scale_color_viridis_d(option = "plasma", end = .6) +
+  labs(x = "total_consumption", y = "total_emission", colour = "food_category", title = "Dependence of food consumption on fooding category")
+  
+  
+
+food_consumption %>%
+gather(key = "feature", value = "value", -food_category, -country) %>%
+ mutate(feature = str_to_title(feature %>% str_replace("_", " "))) %>% 
+ ggplot() +
+ geom_bar(aes(x = feature, y = value, fill = feature), stat = "identity") +
+ facet_wrap(~food_category, scales = "free") +
+ theme(legend.position = "bottom",
+       axis.text.x = element_blank()) + 
+ labs(x = "Features",
+      y = element_blank(),
+      fill = "Feature")
+
+
+## We can see that in the non-veg food items like beef, fish, pork,etc, there is increase in carbon dioxide gas emission with increase in its consumption while there is less volume of gas emission for veggie items such as soybeans, wheat and wheat products.All the slopes shows a positive relation which signifies that the is positive reelationship between the total consumption and finalCO2 emission dependent on food categor.
+```
+
+```{r}
+
+library(tidymodels)
+
+```
+
+
+
+*PREDICTIVE* *ANALYSIS*
+
+  -To build the model for making these prediction
+
+
+
+
+
+
+```{r}
+##Split the dataset into Training & Testing datasets and Preprocessing Data
+food_consumption_split <- initial_split(food_consumption)
+food_consumption_train <- training(food_consumption_split)
+food_consumption_test <- testing(food_consumption_split)
+
+##The use of preprocessing data is to set receipe.As we are prediction carbondioxide emission from the food, the variables are important to evaluate the dataset where total emission is our outcome and others are predictor.
+```
+
+
+
+
+```{r}
+food_consumption_recipe<- recipe(total_consumption~., data=food_consumption_train)
+summary(food_consumption_recipe)
+
+##Success of modelling depends on the "quality" of data. To ensure this quality, there are few transformations that are necessary in our dataset.
+
+```
+
+
+
+
+```{r}
+food_consumption_recipe <- food_consumption_recipe %>%
+  step_center(all_numeric(), -all_outcomes()) %>% 
+ step_scale(all_numeric(), -all_outcomes()) %>%
+   step_corr(all_numeric())
+
+
+food_consumption_prep <- prep(food_consumption_recipe, training = food_consumption_train)
+```
+ 
+ 
+ 
+ 
+```{r}
+food_consumption_bake <- bake(food_consumption_prep, food_consumption_train)
+
+food_consumption_bake
+
+```
+
+
+
+```{r}
+
+##For building  this modelling, our Output variable is Numeric. So, we will use Regression
+model1 <- linear_reg() %>%
+  set_mode("regression") %>%
+  set_engine("lm")
+
+model1
+```
+
+
+
+```{r}
+model1_fitted <- model1 %>%
+  fit(total_emmission ~ total_consumption * food_category, data = food_consumption_bake)
+
+summary(model1_fitted)
+
+
+```
+
+
+
+```{r}
+## Then, we create a workflow to save the recipe and the model together. This workflow can then be used in future with any new data.
+
+workflow <- workflow() %>%
+  add_recipe(food_consumption_recipe) %>%
+  add_model(model1)
+  
+workflow
+```
+
+
+
+
+------------------------------------------------------------------------
+#*Conclusion*
+
+
+#With the help of data analysis of carbon dioxide footprint dataset, we can easily predict the final Carbon dioxide emission from different food according to the type and volume  food consumed.
+------------------------------------------------------------------------
+------------------------------------------------------------------------
+
+
+
